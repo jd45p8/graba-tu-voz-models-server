@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Transform : AWS::Serverless-2016-10-31
+
+Description: Function for graba tu voz users voice recognition
+
+Resources:
+  LambdaSpeakerRecognition:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.8
+      Handler: 'lambda_function.lambda_handler'
+      Environment:
+          Variables:
+            URL_NOISE_REDUCE: "https://us-central1-graba-tu-voz-274617.cloudfunctions.net/noise_reduce"
+            WINDOW_LENGTH: 16384
