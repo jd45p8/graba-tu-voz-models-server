@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+PORT = int(os.environ.get("PORT", 8080))
 
 ALLOWED_TYPES = ['audio/wav', 'audio/wave']
 MAX_FILES = int(os.environ['MAX_FILES'])
@@ -120,3 +121,6 @@ def something_went_wrong(error):
     return {
         "message": "Algo ha salido mal."
     }, 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=PORT)
