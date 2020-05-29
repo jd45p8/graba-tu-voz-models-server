@@ -19,6 +19,20 @@ CHARACTER_MODEL_LABELS_KEY = os.environ['CHARACTER_MODEL_LABELS_KEY']
 SPEAKER_MODEL_KEY = os.environ['SPEAKER_MODEL_KEY']
 SPEAKER_MODEL_LABELS_KEY = os.environ['SPEAKER_MODEL_LABELS_KEY']
 
+# Se precargan el modelo de recocnocimiento del hablante
+SPEAKER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{SPEAKER_MODEL_KEY}')
+SPEAKER_LABEL_ENCODER = LabelEncoder()
+SPEAKER_LABEL_ENCODER.classes_ = np.load(
+    f'{MODELS_PATH}/{SPEAKER_MODEL_LABELS_KEY}',
+    allow_pickle=True)
+
+# Se precarga el modelo de reconocimiento del habla
+CHARACTER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{CHARACTER_MODEL_KEY}')
+CHARACTER_LABEL_ENCODER = LabelEncoder()
+CHARACTER_LABEL_ENCODER.classes_ = np.load(
+    f'{MODELS_PATH}/{CHARACTER_MODEL_LABELS_KEY}',
+    allow_pickle=True)
+
 def extract_features(samples, rate):
     '''
     Extrae las catacterísticas necesarias para la predicción
@@ -57,47 +71,59 @@ def preprocessing(audioBytesIO):
     x = extract_features(cleanSamples, rate)
     return x
 
-def predict_speaker(audioFile):
+def predict_speaker(audioFile, updateModel):
     '''
     Estima a que hablante pertenece el audio en el archivo recibido
     - audioFile: archivo de audiorecibido en un BytesIO de la librería io
+    - updateModel: determina si se deben volver a cargar los modelos
     '''
-    model = keras.models.load_model(f'{MODELS_PATH}/{SPEAKER_MODEL_KEY}')
-    labelEncoder = LabelEncoder()
-    labelEncoder.classes_ = np.load(f'{MODELS_PATH}/{SPEAKER_MODEL_LABELS_KEY}', allow_pickle=True)
+    global SPEAKER_MODEL, SPEAKER_LABEL_ENCODER
+
+    if updateModel:
+        SPEAKER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{SPEAKER_MODEL_KEY}')
+        SPEAKER_LABEL_ENCODER = LabelEncoder()
+        SPEAKER_LABEL_ENCODER.classes_ = np.load(
+            f'{MODELS_PATH}/{SPEAKER_MODEL_LABELS_KEY}',
+            allow_pickle=True)
 
     x = preprocessing(audioFile)
     batch = np.full(shape=(1, x.shape[0], x.shape[1]), fill_value=0)
     batch[0] = x
     # Predecir
     print('Prediciendo')
-    probabilities =  model.predict(batch)[0]
+    probabilities =  SPEAKER_MODEL.predict(batch)[0]
     top5_indexes = np.argpartition(probabilities, -5)[-5:]
     response = []
     for index in top5_indexes:
         response.append({
-            "label": labelEncoder.inverse_transform([index])[0],
+            "label": SPEAKER_LABEL_ENCODER.inverse_transform([index])[0],
             "probability": float(probabilities[index])
         })
     return response
 
-def predict_character(audioFile):
+def predict_character(audioFile, updateModel):
     '''
     Estima a que caracter corresponde el audio en el archivo de audio recibido
     - audioFile: archivo de audiorecibido en un BytesIO de la librería io
+    - updateModel: determina si se deben volver a cargar los modelos
     '''
-    model = keras.models.load_model(f'{MODELS_PATH}/{CHARACTER_MODEL_KEY}')
-    labelEncoder = LabelEncoder()
-    labelEncoder.classes_ = np.load(f'{MODELS_PATH}/{CHARACTER_MODEL_LABELS_KEY}', allow_pickle=True)
+    global CHARACTER_MODEL, CHARACTER_LABEL_ENCODER
+
+    if updateModel:
+        CHARACTER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{CHARACTER_MODEL_KEY}')
+        CHARACTER_LABEL_ENCODER = LabelEncoder()
+        CHARACTER_LABEL_ENCODER.classes_ = np.load(
+            f'{MODELS_PATH}/{CHARACTER_MODEL_LABELS_KEY}',
+            allow_pickle=True)
 
     x = preprocessing(audioFile)
     batch = np.full(shape=(1, x.shape[0], x.shape[1]), fill_value=0)
     batch[0] = x
     # Predecir
     print('Prediciendo')
-    probabilities =  model.predict(batch)[0]
+    probabilities =  CHARACTER_MODEL.predict(batch)[0]
     label_index = np.argmax(probabilities)
     return {
-        "label": labelEncoder.inverse_transform([label_index])[0],
+        "label": CHARACTER_LABEL_ENCODER.inverse_transform([label_index])[0],
         "probability": float(probabilities[label_index])
     }

@@ -45,12 +45,13 @@ def speaker():
             "message": f"Se superó el máximo permitido({MAX_FILES})."
         }, 422
     
-    download_models.download_speaker()
+    updated = download_models.download_speaker()
 
     predictions = {}
     for key in file_keys:            
         audio = request.files[key].stream
-        predicted = prediction.predict_speaker(audio)
+        predicted = prediction.predict_speaker(audio, updated)
+        updated = False if updated else updated
 
         for pred in predicted:
             label = pred['label']
@@ -85,12 +86,13 @@ def character():
             "message": f"Se superó el máximo permitido({MAX_FILES})."
         }, 422
     
-    download_models.download_character()
+    updated = download_models.download_character()
     
     predictions = {}
     for key in file_keys:            
         audio = request.files[key].stream
-        predicted = prediction.predict_character(audio)
+        predicted = prediction.predict_character(audio, updated)
+        updated = False if updated else updated
         predictions[key] = predicted
     return jsonify(predictions), 200
 

@@ -17,6 +17,7 @@ SPEAKER_MODEL_LABELS_KEY = os.environ['SPEAKER_MODEL_LABELS_KEY']
 def download_all():
     '''
     Descarga los modelos del S3 Bucket indicado en las variables de entorno.
+    Retorna: Falso si no hay cambios en los modelos.
     '''
     session = boto3.Session(
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -25,14 +26,16 @@ def download_all():
     s3_resource = session.resource('s3')
     s3_grabatuvozmodels = s3_resource.Bucket('grabatuvozmodels')
 
-    download_model_file(CHARACTER_MODEL_KEY, s3_grabatuvozmodels)
-    download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels)
-    download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
-    download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = download_model_file(CHARACTER_MODEL_KEY, s3_grabatuvozmodels)
+    updated = updated or download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels)
+    updated = updated or download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = updated or download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    return updated
 
 def download_speaker():
     '''
     Descarga los modelos del hablante del S3 Bucket indicado en las variables de entorno.
+    Retorna: Falso si no hay cambios en los modelos.
     '''
     session = boto3.Session(
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -41,12 +44,14 @@ def download_speaker():
     s3_resource = session.resource('s3')
     s3_grabatuvozmodels = s3_resource.Bucket('grabatuvozmodels')
 
-    download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels)
-    download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels)
+    updated = updated or download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    return updated
 
 def download_character():
     '''
     Descarga los modelos del S3 Bucket indicado en las variables de entorno.
+    Retorna: Falso si no hay cambios los modelos.
     '''
     session = boto3.Session(
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -55,14 +60,16 @@ def download_character():
     s3_resource = session.resource('s3')
     s3_grabatuvozmodels = s3_resource.Bucket('grabatuvozmodels')
 
-    download_model_file(CHARACTER_MODEL_KEY, s3_grabatuvozmodels)
-    download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = download_model_file(CHARACTER_MODEL_KEY, s3_grabatuvozmodels)
+    updated = updated or download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    return updated
 
 def download_model_file(key, bucket):
     '''
     Descarga el archivo de la llave indicada del S3 bucket
     - key la llave del archivo
     - bucket el objeto S3 Bucket que tiene el archivo
+    Retorna: Falso si no se descargó el archivo.
     '''
     etag_path = Path(f'{MODELS_PATH}/{key}_etag')
     final_path = Path(f'{MODELS_PATH}/{key}')
@@ -77,7 +84,7 @@ def download_model_file(key, bucket):
     obj = bucket.Object(key=key)
     # Finaliza la ejecucion de la función si no ha cambiado el archivo
     if currentTag == obj.e_tag:
-        return    
+        return False
     
     # Descarga el archivo nuevo
     obj.download_file(Filename=str(temp_path.resolve()))    
@@ -87,7 +94,7 @@ def download_model_file(key, bucket):
     # Si no es un .zip lo mueve a la capeta permanente
     if obj.content_type != 'application/zip':
         shutil.move(temp_path, final_path)
-        return
+        return True
     
     # Si es un .zip se extrae
     with zipfile.ZipFile(file=temp_path, mode='r') as zip_ref:
@@ -100,3 +107,5 @@ def download_model_file(key, bucket):
     
     # Borra el archivo después de hacer la extracción
     temp_path.unlink()
+
+    return True
