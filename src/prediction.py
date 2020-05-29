@@ -19,19 +19,11 @@ CHARACTER_MODEL_LABELS_KEY = os.environ['CHARACTER_MODEL_LABELS_KEY']
 SPEAKER_MODEL_KEY = os.environ['SPEAKER_MODEL_KEY']
 SPEAKER_MODEL_LABELS_KEY = os.environ['SPEAKER_MODEL_LABELS_KEY']
 
-# Se precargan el modelo de recocnocimiento del hablante
-SPEAKER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{SPEAKER_MODEL_KEY}')
-SPEAKER_LABEL_ENCODER = LabelEncoder()
-SPEAKER_LABEL_ENCODER.classes_ = np.load(
-    f'{MODELS_PATH}/{SPEAKER_MODEL_LABELS_KEY}',
-    allow_pickle=True)
+SPEAKER_MODEL = None
+SPEAKER_LABEL_ENCODER = None
 
-# Se precarga el modelo de reconocimiento del habla
-CHARACTER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{CHARACTER_MODEL_KEY}')
-CHARACTER_LABEL_ENCODER = LabelEncoder()
-CHARACTER_LABEL_ENCODER.classes_ = np.load(
-    f'{MODELS_PATH}/{CHARACTER_MODEL_LABELS_KEY}',
-    allow_pickle=True)
+CHARACTER_MODEL = None
+CHARACTER_LABEL_ENCODER = None
 
 def extract_features(samples, rate):
     '''

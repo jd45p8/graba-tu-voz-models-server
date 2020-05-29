@@ -27,9 +27,9 @@ def download_all():
     s3_grabatuvozmodels = s3_resource.Bucket('grabatuvozmodels')
 
     updated = download_model_file(CHARACTER_MODEL_KEY, s3_grabatuvozmodels)
-    updated = updated or download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels)
-    updated = updated or download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
-    updated = updated or download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels) or updated
+    updated = download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels) or updated
+    updated = download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels) or updated
     return updated
 
 def download_speaker():
@@ -45,7 +45,7 @@ def download_speaker():
     s3_grabatuvozmodels = s3_resource.Bucket('grabatuvozmodels')
 
     updated = download_model_file(SPEAKER_MODEL_KEY, s3_grabatuvozmodels)
-    updated = updated or download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = download_model_file(SPEAKER_MODEL_LABELS_KEY, s3_grabatuvozmodels) or updated
     return updated
 
 def download_character():
@@ -61,7 +61,7 @@ def download_character():
     s3_grabatuvozmodels = s3_resource.Bucket('grabatuvozmodels')
 
     updated = download_model_file(CHARACTER_MODEL_KEY, s3_grabatuvozmodels)
-    updated = updated or download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels)
+    updated = download_model_file(CHARACTER_MODEL_LABELS_KEY, s3_grabatuvozmodels) or updated
     return updated
 
 def download_model_file(key, bucket):
