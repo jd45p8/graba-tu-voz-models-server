@@ -67,7 +67,14 @@ def preprocessing(audioBytesIO, phrase_samples):
     for i in range(1, len(cleanSamples)//phrase_samples):
         start = end
         end = i*phrase_samples
-        features = extract_features(cleanSamples[start:end], rate)
+        samplesPartition = cleanSamples[start:end]
+        # Cortar audios
+        samplesPower = np.power(samplesPartition, 2)
+        samplesConvolution = np.convolve(a=samplesPower, v=np.ones(10000), mode='same')
+        classFreq, classLim = np.histogram(samplesConvolution)
+        selectedConvPowerSamples = samplesPartition[samplesConvolution > classLim[2]]
+        # Extraer las características del audio
+        features = extract_features(selectedConvPowerSamples, rate)
         features_array.append(features)
     
     features = extract_features(cleanSamples[end:-1], rate)
