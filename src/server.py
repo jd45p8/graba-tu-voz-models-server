@@ -92,15 +92,15 @@ def page_no_found(error):
         "message": "Recurso no encontrado."
     }, 404
 
-@app.errorhandler(Exception)
-def something_went_wrong(error):
-    print(error)
-    '''
-    Responde a cualquier otro error como un error del servidor.
-    '''
-    return {
-        "message": "Algo ha salido mal."
-    }, 500
+# @app.errorhandler(Exception)
+# def something_went_wrong(error):
+#     print(error)
+#     '''
+#     Responde a cualquier otro error como un error del servidor.
+#     '''
+#     return {
+#         "message": "Algo ha salido mal."
+#     }, 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT)

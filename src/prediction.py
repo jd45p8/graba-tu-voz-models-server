@@ -3,6 +3,7 @@ import io
 import os
 import json
 import base64
+import operator
 
 import numpy as np
 import soundfile as sf
@@ -47,7 +48,7 @@ def extract_features(samples, rate):
 
 def preprocessing(audioBytesIO, phrase_samples):
     '''
-    Realiza el preprocesamiento necesario al audio recibido
+    Realiza el preprocesamiento necesario al audio recibido, solo se esperan 4 dígitos
     - audioBytesIO: es el audio en un io.BytesIO
     Retorna: las características del audio recibido para su predicción
     '''
@@ -64,7 +65,7 @@ def preprocessing(audioBytesIO, phrase_samples):
     features_array = []
     start = 0
     end = 0
-    for i in range(1, round(len(cleanSamples)/phrase_samples)):
+    for i in range(1, 4):
         start = end
         end = i*phrase_samples
         samplesPartition = cleanSamples[start:end]
@@ -110,15 +111,21 @@ def predict_speaker(audioFile, phrase_samples, updateModel):
     probabilities = SPEAKER_MODEL.predict(batch)
     response = []
 
-    prob = np.max(probabilities, axis=0)
-    top5_indexes = np.argpartition(prob, -5)[-5:]
+    prob_dict = {}
+    for prob in probabilities:
+        top5_indexes = np.argpartition(prob, -5)[-5:]
+        for index in top5_indexes:
+            if not index in prob_dict:
+                prob_dict[index] = prob[index]
+            elif prob_dict[index] < prob[index]:
+                prob_dict[index] = prob[index]
+    probs_sorted = sorted(prob_dict.items(), key=operator.itemgetter(1), reverse=True)
 
-    for index in top5_indexes:
+    for i in range(5):
         response.append({
-            "label": SPEAKER_LABEL_ENCODER.inverse_transform([index])[0],
-            "probability": float(prob[index])
+            "label": SPEAKER_LABEL_ENCODER.inverse_transform([probs_sorted[i][0]])[0],
+            "probability": float(probs_sorted[i][1])
         })
-    response = sorted(response, key=lambda elem: elem["probability"], reverse=True)
     
     return response
 
