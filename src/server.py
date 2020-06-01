@@ -50,23 +50,7 @@ def speaker():
     predictions = {}           
     audio = request.files["file"].stream
     predicted = prediction.predict_speaker(audio, int(request.form["phraseSamples"]), updated)
-
-    for pred in predicted:
-        label = pred['label']
-        prob = pred['probability']
-        if label not in predictions or predictions[label] < prob:
-            predictions[label] = prob
-    
-    predictions = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
-    selected = []
-    for i in range(5):
-        label = predictions[i][0]
-        prob = predictions[i][1]
-        selected.append({
-            "label": label,
-            "probability": prob
-        })
-    return jsonify(selected), 200
+    return jsonify(predicted), 200
 
 @app.route('/character', methods=['POST'])
 def character():

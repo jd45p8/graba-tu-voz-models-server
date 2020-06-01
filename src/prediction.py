@@ -64,7 +64,7 @@ def preprocessing(audioBytesIO, phrase_samples):
     features_array = []
     start = 0
     end = 0
-    for i in range(1, len(cleanSamples)//phrase_samples):
+    for i in range(1, round(len(cleanSamples)/phrase_samples)):
         start = end
         end = i*phrase_samples
         samplesPartition = cleanSamples[start:end]
@@ -77,7 +77,14 @@ def preprocessing(audioBytesIO, phrase_samples):
         features = extract_features(selectedConvPowerSamples, rate)
         features_array.append(features)
     
-    features = extract_features(cleanSamples[end:-1], rate)
+    samplesPartition = cleanSamples[end:-1]
+    # Cortar audios
+    samplesPower = np.power(samplesPartition, 2)
+    samplesConvolution = np.convolve(a=samplesPower, v=np.ones(10000), mode='same')
+    classFreq, classLim = np.histogram(samplesConvolution)
+    selectedConvPowerSamples = samplesPartition[samplesConvolution > classLim[2]]
+    # Extraer las características del audio
+    features = extract_features(selectedConvPowerSamples, rate)
     features_array.append(features)
 
     return np.array(features_array)
@@ -100,16 +107,18 @@ def predict_speaker(audioFile, phrase_samples, updateModel):
     batch = preprocessing(audioFile, phrase_samples)
     # Predecir
     print('Prediciendo')
-    probabilities =  SPEAKER_MODEL.predict(batch)
+    probabilities = SPEAKER_MODEL.predict(batch)
     response = []
 
-    for prob in probabilities:
-        top5_indexes = np.argpartition(prob, -5)[-5:]
-        for index in top5_indexes:
-            response.append({
-                "label": SPEAKER_LABEL_ENCODER.inverse_transform([index])[0],
-                "probability": float(prob[index])
-            })
+    prob = np.max(probabilities, axis=0)
+    top5_indexes = np.argpartition(prob, -5)[-5:]
+
+    for index in top5_indexes:
+        response.append({
+            "label": SPEAKER_LABEL_ENCODER.inverse_transform([index])[0],
+            "probability": float(prob[index])
+        })
+    response = sorted(response, key=lambda elem: elem["probability"], reverse=True)
     
     return response
 
