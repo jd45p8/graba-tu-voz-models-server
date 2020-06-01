@@ -47,17 +47,15 @@ def speaker():
     
     updated = download_models.download_speaker()
 
-    predictions = {}
-    for key in file_keys:            
-        audio = request.files[key].stream
-        predicted = prediction.predict_speaker(audio, updated)
-        updated = False if updated else updated
+    predictions = {}           
+    audio = request.files["file"].stream
+    predicted = prediction.predict_speaker(audio, int(request.form["phraseSamples"]), updated)
 
-        for pred in predicted:
-            label = pred['label']
-            prob = pred['probability']
-            if label not in predictions or predictions[label] < prob:
-                predictions[label] = prob
+    for pred in predicted:
+        label = pred['label']
+        prob = pred['probability']
+        if label not in predictions or predictions[label] < prob:
+            predictions[label] = prob
     
     predictions = sorted(predictions.items(), key=lambda x: x[1], reverse=True)
     selected = []
@@ -87,14 +85,10 @@ def character():
         }, 422
     
     updated = download_models.download_character()
-    
-    predictions = {}
-    for key in file_keys:            
-        audio = request.files[key].stream
-        predicted = prediction.predict_character(audio, updated)
-        updated = False if updated else updated
-        predictions[key] = predicted
-    return jsonify(predictions), 200
+        
+    audio = request.files["file"].stream
+    predicted = prediction.predict_character(audio, int(request.form["phraseSamples"]), updated)
+    return jsonify(predicted), 200
 
 @app.errorhandler(405)
 def method_not_allowed(error):

@@ -45,7 +45,7 @@ def extract_features(samples, rate):
     features = mfcc(y=windowSamples, sr=rate, n_mfcc=64, hop_length=1024)
     return features
 
-def preprocessing(audioBytesIO):
+def preprocessing(audioBytesIO, phrase_samples):
     '''
     Realiza el preprocesamiento necesario al audio recibido
     - audioBytesIO: es el audio en un io.BytesIO
@@ -58,12 +58,24 @@ def preprocessing(audioBytesIO):
     print('Limpiando el audio')
     noisySamples = samples[-rate:-1]
     cleanSamples = nr.reduce_noise(audio_clip=samples, noise_clip=noisySamples)[:-rate]
+
     # Extraer las características
     print('Extrayendo las características')
-    x = extract_features(cleanSamples, rate)
-    return x
+    features_array = []
+    start = 0
+    end = 0
+    for i in range(1, len(cleanSamples)//phrase_samples):
+        start = end
+        end = i*phrase_samples
+        features = extract_features(cleanSamples[start:end], rate)
+        features_array.append(features)
+    
+    features = extract_features(cleanSamples[end:-1], rate)
+    features_array.append(features)
 
-def predict_speaker(audioFile, updateModel):
+    return np.array(features_array)
+
+def predict_speaker(audioFile, phrase_samples, updateModel):
     '''
     Estima a que hablante pertenece el audio en el archivo recibido
     - audioFile: archivo de audiorecibido en un BytesIO de la librería io
@@ -71,29 +83,30 @@ def predict_speaker(audioFile, updateModel):
     '''
     global SPEAKER_MODEL, SPEAKER_LABEL_ENCODER
 
-    if updateModel:
+    if updateModel or not SPEAKER_MODEL:
         SPEAKER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{SPEAKER_MODEL_KEY}')
         SPEAKER_LABEL_ENCODER = LabelEncoder()
         SPEAKER_LABEL_ENCODER.classes_ = np.load(
             f'{MODELS_PATH}/{SPEAKER_MODEL_LABELS_KEY}',
             allow_pickle=True)
 
-    x = preprocessing(audioFile)
-    batch = np.full(shape=(1, x.shape[0], x.shape[1]), fill_value=0)
-    batch[0] = x
+    batch = preprocessing(audioFile, phrase_samples)
     # Predecir
     print('Prediciendo')
-    probabilities =  SPEAKER_MODEL.predict(batch)[0]
-    top5_indexes = np.argpartition(probabilities, -5)[-5:]
+    probabilities =  SPEAKER_MODEL.predict(batch)
     response = []
-    for index in top5_indexes:
-        response.append({
-            "label": SPEAKER_LABEL_ENCODER.inverse_transform([index])[0],
-            "probability": float(probabilities[index])
-        })
+
+    for prob in probabilities:
+        top5_indexes = np.argpartition(prob, -5)[-5:]
+        for index in top5_indexes:
+            response.append({
+                "label": SPEAKER_LABEL_ENCODER.inverse_transform([index])[0],
+                "probability": float(prob[index])
+            })
+    
     return response
 
-def predict_character(audioFile, updateModel):
+def predict_character(audioFile, phrase_samples, updateModel):
     '''
     Estima a que caracter corresponde el audio en el archivo de audio recibido
     - audioFile: archivo de audiorecibido en un BytesIO de la librería io
@@ -101,21 +114,24 @@ def predict_character(audioFile, updateModel):
     '''
     global CHARACTER_MODEL, CHARACTER_LABEL_ENCODER
 
-    if updateModel:
+    if updateModel or not CHARACTER_MODEL:
         CHARACTER_MODEL = keras.models.load_model(f'{MODELS_PATH}/{CHARACTER_MODEL_KEY}')
         CHARACTER_LABEL_ENCODER = LabelEncoder()
         CHARACTER_LABEL_ENCODER.classes_ = np.load(
             f'{MODELS_PATH}/{CHARACTER_MODEL_LABELS_KEY}',
             allow_pickle=True)
 
-    x = preprocessing(audioFile)
-    batch = np.full(shape=(1, x.shape[0], x.shape[1]), fill_value=0)
-    batch[0] = x
+    batch = preprocessing(audioFile, phrase_samples)
     # Predecir
     print('Prediciendo')
-    probabilities =  CHARACTER_MODEL.predict(batch)[0]
-    label_index = np.argmax(probabilities)
-    return {
-        "label": CHARACTER_LABEL_ENCODER.inverse_transform([label_index])[0],
-        "probability": float(probabilities[label_index])
-    }
+    probabilities =  CHARACTER_MODEL.predict(batch)
+    response = []
+
+    for prob in probabilities:
+        label_index = np.argmax(prob)
+        response.append({
+            "label": CHARACTER_LABEL_ENCODER.inverse_transform([label_index])[0],
+            "probability": float(prob[label_index])
+        })
+    
+    return response
