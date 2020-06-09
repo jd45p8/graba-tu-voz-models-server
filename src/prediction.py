@@ -111,20 +111,31 @@ def predict_speaker(audioFile, phrase_samples, updateModel):
     probabilities = SPEAKER_MODEL.predict(batch)
     response = []
 
-    prob_dict = {}
+    # Se selecciona el top 5 con una votación
+    score_dict = {}
+    score_list = []
     for prob in probabilities:
-        top5_indexes = np.argpartition(prob, -5)[-5:]
-        for index in top5_indexes:
-            if not index in prob_dict:
-                prob_dict[index] = prob[index]
-            elif prob_dict[index] < prob[index]:
-                prob_dict[index] = prob[index]
-    probs_sorted = sorted(prob_dict.items(), key=operator.itemgetter(1), reverse=True)
+        keys = prob.argsort()
+        for index, key in enumerate(keys):
+            if not key in score_dict:
+                score_dict[key] = len(score_list)
 
-    for i in range(5):
+                elem = [key, # Email
+                    np.median(probabilities[:, key]), #Probabilidad
+                    index * prob[key]] # Puntaje de la votación
+
+                score_list.append(elem)
+            else:
+                pos = score_dict[key]
+                score_list[pos][2] += index * prob[key]
+
+    score_sorted = sorted(score_list, key=operator.itemgetter(2), reverse=True)
+    top_5 = sorted(score_sorted[:5], key=operator.itemgetter(1), reverse=True)
+
+    for key, probability, score in top_5:
         response.append({
-            "label": SPEAKER_LABEL_ENCODER.inverse_transform([probs_sorted[i][0]])[0],
-            "probability": float(probs_sorted[i][1])
+            "label": SPEAKER_LABEL_ENCODER.inverse_transform([key])[0],
+            "probability": float(probability)
         })
     
     return response

@@ -46,8 +46,7 @@ def speaker():
         }, 422
     
     updated = download_models.download_speaker()
-
-    predictions = {}           
+       
     audio = request.files["file"].stream
     predicted = prediction.predict_speaker(audio, int(request.form["phraseSamples"]), updated)
     return jsonify(predicted), 200
